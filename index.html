@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard TPA Cipeucang</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+:root{
+  --bg:#f1f4f9;--surface:#fff;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;
+  --brand:#0f766e;--brand-soft:#ccfbf1;--ok:#16a34a;--warn:#f59e0b;--bad:#dc2626;
+}
+body{background:var(--bg);color:var(--ink);font-family:'Inter','Segoe UI',system-ui,sans-serif}
+
+/* Navbar */
+.topbar{background:linear-gradient(135deg,#0f172a,#134e4a);}
+.topbar .brand-icon{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.12);display:inline-flex;align-items:center;justify-content:center}
+
+/* Cards */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.04);height:100%}
+.panel-head{padding:1rem 1.25rem;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.panel-head h5{margin:0;font-size:1rem;font-weight:600}
+.panel-head h5 i{color:var(--brand);margin-right:.5rem}
+.panel-body{padding:1.25rem}
+
+/* KPI */
+.kpi{display:flex;align-items:center;gap:1rem;padding:1.1rem 1.25rem}
+.kpi-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0}
+.kpi-label{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.kpi-value{font-size:1.5rem;font-weight:700;line-height:1.2}
+
+/* Detail list */
+.detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem 2rem}
+.detail-item dt{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:.15rem}
+.detail-item dd{margin:0;font-weight:500}
+.detail-item.full{grid-column:1/-1}
+
+/* Gauge */
+.gauge{position:relative;width:170px;height:170px;margin:0 auto}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .track{stroke:var(--line)}
+.gauge .bar{transition:stroke-dashoffset .8s ease,stroke .4s;stroke-linecap:round}
+.gauge-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge-text strong{font-size:2rem;line-height:1}
+.gauge-text span{font-size:.75rem;color:var(--muted)}
+
+/* Status pills */
+.status-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .85rem;border-radius:999px;font-size:.85rem;font-weight:600}
+.status-ok{background:#dcfce7;color:#166534}
+.status-warn{background:#fef3c7;color:#92400e}
+.status-bad{background:#fee2e2;color:#991b1b}
+
+/* Waste bars */
+.waste-row+.waste-row{margin-top:1rem}
+.waste-row .progress{height:10px;border-radius:999px;background:var(--line)}
+.waste-row .progress-bar{border-radius:999px}
+
+/* Map */
+#map{height:440px;border-radius:10px;z-index:0}
+
+/* Alternatives */
+.alt-list{max-height:440px;overflow-y:auto;margin:-.25rem;padding:.25rem}
+.alt-item{border:1px solid var(--line);border-radius:12px;padding:.9rem 1rem;margin-bottom:.75rem;background:#fff;transition:border-color .2s,box-shadow .2s}
+.alt-item:hover{border-color:var(--brand);box-shadow:0 4px 14px rgba(15,118,110,.12)}
+.alt-rank{width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;font-size:.8rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-right:.5rem}
+.alt-meta{font-size:.8rem;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:.3rem;font-size:.75rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;background:var(--bg);color:var(--ink)}
+.alt-dim{opacity:.55}
+
+/* Empty state */
+.empty-state{text-align:center;color:var(--muted);padding:2rem 1rem}
+.empty-state i{font-size:2rem;margin-bottom:.5rem;display:block;opacity:.5}
+
+/* Modal & form */
+.modal-content{border:0;border-radius:14px}
+.modal-header{border-bottom:1px solid var(--line)}
+.form-label{font-size:.85rem;font-weight:600;color:var(--muted);margin-bottom:.25rem}
+.form-section{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--brand);font-weight:700;margin:1.25rem 0 .75rem}
+.form-section:first-child{margin-top:0}
+
+/* Toast */
+.toast-container{z-index:2000}
+
+/* Footer */
+footer{color:var(--muted);font-size:.85rem}
+
+/* Responsif */
+@media(max-width:768px){
+  .detail-grid{grid-template-columns:1fr}
+  #map{height:320px}
+}
+</style>
+</head>
+<body>
+
+<nav class="topbar navbar navbar-dark sticky-top shadow-sm">
+  <div class="container-xl">
+    <span class="navbar-brand d-flex align-items-center gap-2 mb-0">
+      <span class="brand-icon"><i class="fas fa-dumpster"></i></span>
+      <span>
+        <span class="fw-semibold d-block lh-1">Dashboard TPA</span>
+        <small class="opacity-75" style="font-size:.7rem" id="navSub">Monitoring kapasitas</small>
+      </span>
+    </span>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-light btn-sm" id="btnEdit"><i class="fas fa-pen-to-square me-1"></i><span class="d-none d-sm-inline">Edit Data TPA</span></button>
+      <button class="btn btn-light btn-sm" id="btnAddAlt"><i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">TPA Alternatif</span></button>
+    </div>
+  </div>
+</nav>
+
+<main class="container-xl py-4">
+  <div id="alertArea"></div>
+
+  <!-- KPI -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="panel kpi">
+      <div class="kpi-icon" style="background:#ccfbf1;color:#0f766e"><i class="fas fa-gauge-high"></i></div>
+      <div><div class="kpi-label">Terisi</div><div class="kpi-value" id="kpiPercent">-</div></div>
+    </div></div>
+    <div class="col-6 col-lg-3"><div class="panel kpi">
+      <div class="kpi-icon" style="background:#fee2e2;color:#b91c1c"><i class="fas fa-weight-hanging"></i></div>
+      <div><div class="kpi-label">Volume Terisi</div><div class="kpi-value" id="kpiFilled">-</div></div>
+    </div></div>
+    <div class="col-6 col-lg-3"><div class="panel kpi">
+      <div class="kpi-icon" style="background:#dcfce7;color:#15803d"><i class="fas fa-box-open"></i></div>
+      <div><div class="kpi-label">Sisa Kapasitas</div><div class="kpi-value" id="kpiRemain">-</div></div>
+    </div></div>
+    <div class="col-6 col-lg-3"><div class="panel kpi">
+      <div class="kpi-icon" style="background:#e0e7ff;color:#4338ca"><i class="fas fa-clock-rotate-left"></i></div>
+      <div><div class="kpi-label">Update Terakhir</div><div class="kpi-value" style="font-size:1.05rem" id="kpiUpdate">-</div></div>
+    </div></div>
+  </div>
+
+  <!-- Detail + Kapasitas + Komposisi -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="panel">
+        <div class="panel-head"><h5><i class="fas fa-circle-info"></i>Detail TPA</h5></div>
+        <div class="panel-body">
+          <dl class="detail-grid mb-0">
+            <div class="detail-item full"><dt>Nama</dt><dd id="tpaName" class="fs-5 fw-semibold">-</dd></div>
+            <div class="detail-item full"><dt>Alamat</dt><dd id="tpaAddress">-</dd></div>
+            <div class="detail-item"><dt>Operator</dt><dd id="tpaOperator">-</dd></div>
+            <div class="detail-item"><dt>Kontak</dt><dd id="tpaContact">-</dd></div>
+            <div class="detail-item"><dt>Tahun Operasional</dt><dd id="tpaYear">-</dd></div>
+            <div class="detail-item"><dt>Luas Lahan</dt><dd id="tpaLand">-</dd></div>
+            <div class="detail-item"><dt>Metode Pengolahan</dt><dd id="tpaMethod">-</dd></div>
+            <div class="detail-item"><dt>Koordinat</dt><dd id="tpaCoords">-</dd></div>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <div class="panel">
+        <div class="panel-head"><h5><i class="fas fa-chart-pie"></i>Kapasitas</h5></div>
+        <div class="panel-body text-center">
+          <div class="gauge">
+            <svg viewBox="0 0 200 200" width="170" height="170">
+              <circle class="track" cx="100" cy="100" r="85" fill="none" stroke-width="18"/>
+              <circle class="bar" id="gaugeBar" cx="100" cy="100" r="85" fill="none" stroke-width="18" stroke-dasharray="534.07" stroke-dashoffset="534.07"/>
+            </svg>
+            <div class="gauge-text"><strong id="gaugePercent">0%</strong><span>terisi</span></div>
+          </div>
+          <p class="mt-3 mb-2 small text-muted"><span id="capFilled">0</span> dari <span id="capTotal">0</span> Ton</p>
+          <span id="capStatus" class="status-pill status-ok"><i class="fas fa-circle-check"></i>Normal</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <div class="panel">
+        <div class="panel-head"><h5><i class="fas fa-recycle"></i>Komposisi Limbah</h5></div>
+        <div class="panel-body">
+          <div class="waste-row">
+            <div class="d-flex justify-content-between small mb-1"><span>Organik</span><strong id="wasteOrganic">-</strong></div>
+            <div class="progress"><div class="progress-bar" id="barOrganic" style="background:#16a34a"></div></div>
+          </div>
+          <div class="waste-row">
+            <div class="d-flex justify-content-between small mb-1"><span>Anorganik</span><strong id="wasteInorganic">-</strong></div>
+            <div class="progress"><div class="progress-bar" id="barInorganic" style="background:#0ea5e9"></div></div>
+          </div>
+          <div class="waste-row">
+            <div class="d-flex justify-content-between small mb-1"><span>B3</span><strong id="wasteB3">-</strong></div>
+            <div class="progress"><div class="progress-bar" id="barB3" style="background:#f59e0b"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Peta + Alternatif -->
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="panel">
+        <div class="panel-head"><h5><i class="fas fa-map-location-dot"></i>Lokasi TPA &amp; Alternatif</h5></div>
+        <div class="panel-body"><div id="map"></div></div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="panel">
+        <div class="panel-head">
+          <h5><i class="fas fa-sitemap"></i>TPA Alternatif</h5>
+          <span class="chip" id="altCount">0</span>
+        </div>
+        <div class="panel-body">
+          <div id="altNotice"></div>
+          <div class="alt-list" id="altList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="text-center py-4">
+  Dashboard TPA Cipeucang &middot; data tersimpan di <code>data.json</code>
+</footer>
+
+<!-- Modal: Edit TPA -->
+<div class="modal fade" id="modalTpa" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-pen-to-square me-2 text-success"></i>Edit Data TPA</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formTpa" class="modal-body">
+        <div class="form-section">Informasi Umum</div>
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">Nama TPA</label><input class="form-control" id="fName" required></div>
+          <div class="col-md-6"><label class="form-label">Operator</label><input class="form-control" id="fOperator" required></div>
+          <div class="col-12"><label class="form-label">Alamat</label><textarea class="form-control" id="fAddress" rows="2" required></textarea></div>
+          <div class="col-md-6"><label class="form-label">Kontak</label><input class="form-control" id="fPhone" required></div>
+          <div class="col-md-6"><label class="form-label">Tahun Operasional</label><input type="number" min="1900" max="2100" class="form-control" id="fYear" required></div>
+          <div class="col-md-6"><label class="form-label">Luas Lahan</label><input class="form-control" id="fLand" required></div>
+          <div class="col-md-6"><label class="form-label">Metode Pengolahan</label><input class="form-control" id="fMethod" required></div>
+        </div>
+
+        <div class="form-section">Lokasi</div>
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">Latitude</label><input type="number" step="any" class="form-control" id="fLat" required></div>
+          <div class="col-md-6"><label class="form-label">Longitude</label><input type="number" step="any" class="form-control" id="fLng" required></div>
+        </div>
+
+        <div class="form-section">Kapasitas</div>
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">Total Kapasitas (Ton)</label><input type="number" min="1" class="form-control" id="fTotal" required></div>
+          <div class="col-md-6"><label class="form-label">Terisi (Ton)</label><input type="number" min="0" class="form-control" id="fFilled" required></div>
+        </div>
+
+        <div class="form-section">Komposisi Limbah (%)</div>
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label">Organik</label><input type="number" min="0" max="100" class="form-control" id="fOrganic" required></div>
+          <div class="col-md-4"><label class="form-label">Anorganik</label><input type="number" min="0" max="100" class="form-control" id="fInorganic" required></div>
+          <div class="col-md-4"><label class="form-label">B3</label><input type="number" min="0" max="100" class="form-control" id="fB3" required></div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+        <button class="btn btn-success" id="btnSaveTpa"><i class="fas fa-floppy-disk me-1"></i>Simpan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Tambah/Edit Alternatif -->
+<div class="modal fade" id="modalAlt" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="altModalTitle"><i class="fas fa-plus me-2 text-success"></i>Tambah TPA Alternatif</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formAlt" class="modal-body">
+        <input type="hidden" id="aId">
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">Nama TPA</label><input class="form-control" id="aName" required></div>
+          <div class="col-md-6"><label class="form-label">Kontak</label><input class="form-control" id="aPhone" required></div>
+          <div class="col-12"><label class="form-label">Alamat</label><textarea class="form-control" id="aAddress" rows="2" required></textarea></div>
+          <div class="col-md-4"><label class="form-label">Jarak (km)</label><input type="number" step="0.1" min="0" class="form-control" id="aDistance" required></div>
+          <div class="col-md-4"><label class="form-label">Terisi (%)</label><input type="number" min="0" max="100" class="form-control" id="aCapacity" required></div>
+          <div class="col-md-4"><label class="form-label">Rating (1-5)</label><input type="number" step="0.1" min="1" max="5" class="form-control" id="aRating" required></div>
+          <div class="col-md-6"><label class="form-label">Latitude</label><input type="number" step="any" class="form-control" id="aLat" required></div>
+          <div class="col-md-6"><label class="form-label">Longitude</label><input type="number" step="any" class="form-control" id="aLng" required></div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+        <button class="btn btn-success" id="btnSaveAlt"><i class="fas fa-floppy-disk me-1"></i>Simpan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ---------- Konstanta ---------- */
+const WARN_AT = 75, FULL_AT = 90;
+const CIRC = 2 * Math.PI * 85;
+
+/* ---------- State ---------- */
+let state = null;               // { tpa, alternatives }
+let map, mainMarker, altMarkers = [];
+
+/* ---------- Helper ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[c]));
+const fmt = n => Number(n).toLocaleString('id-ID');
+const pct = c => c.total > 0 ? Math.round(c.filled / c.total * 100) : 0;
+
+/* ---------- Toast ---------- */
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast align-items-center text-bg-${type} border-0`;
+  el.innerHTML = `<div class="d-flex"><div class="toast-body">${esc(msg)}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+  $('toasts').appendChild(el);
+  const t = new bootstrap.Toast(el, { delay: 4000 });
+  el.addEventListener('hidden.bs.toast', () => el.remove());
+  t.show();
+}
+
+/* ---------- Status ---------- */
+function statusOf(p) {
+  if (p >= FULL_AT) return {cls:'status-bad',icon:'fa-triangle-exclamation',text:'Penuh — perlu alternatif',color:'#dc2626'};
+  if (p >= WARN_AT) return {cls:'status-warn',icon:'fa-circle-exclamation',text:'Kapasitas tinggi',color:'#f59e0b'};
+  return {cls:'status-ok',icon:'fa-circle-check',text:'Normal',color:'#16a34a'};
+}
+
+/* ---------- Load data (hanya file data.json) ---------- */
+async function loadData() {
+  const r = await fetch('data.json?t=' + Date.now());
+  if (!r.ok) throw new Error('Gagal memuat data (HTTP ' + r.status + ')');
+  state = await r.json();
+}
+
+/* ---------- (Opsional) Simpan ke localStorage ---------- */
+function persistLocally() {
+  // Simpan snapshot ke localStorage, bukan ke GitHub.
+  localStorage.setItem('tpa_state', JSON.stringify(state));
+}
+
+/* ---------- Commit (ubah state + simpan lokal) ---------- */
+async function commit(mutator, okMsg) {
+  const snapshot = JSON.stringify(state);
+  try {
+    mutator();
+    // Simpan perubahan secara lokal (bukan ke GitHub)
+    persistLocally();
+    render();
+    toast(okMsg, 'success');
+    return true;
+  } catch (e) {
+    state = JSON.parse(snapshot);
+    render();
+    toast('Gagal menyimpan: ' + e.message, 'danger');
+    return false;
+  }
+}
+
+/* ---------- Render ---------- */
+function render() {
+  const t = state.tpa, p = pct(t.capacity), st = statusOf(p);
+
+  $('navSub').textContent = t.name;
+  $('kpiPercent').textContent = p + '%';
+  $('kpiFilled').textContent = fmt(t.capacity.filled) + ' Ton';
+  $('kpiRemain').textContent = fmt(Math.max(t.capacity.total - t.capacity.filled, 0)) + ' Ton';
+  $('kpiUpdate').textContent = new Date(t.last_update).toLocaleString('id-ID', {dateStyle:'medium',timeStyle:'short'});
+
+  $('tpaName').textContent = t.name;
+  $('tpaAddress').textContent = t.address;
+  $('tpaOperator').textContent = t.operator;
+  $('tpaContact').textContent = t.phone;
+  $('tpaYear').textContent = t.year_operational;
+  $('tpaLand').textContent = t.land_area;
+  $('tpaMethod').textContent = t.processing_method;
+  $('tpaCoords').textContent = `${t.coordinates.latitude.toFixed(4)}, ${t.coordinates.longitude.toFixed(4)}`;
+
+  // gauge
+  $('gaugePercent').textContent = p + '%';
+  $('capFilled').textContent = fmt(t.capacity.filled);
+  $('capTotal').textContent = fmt(t.capacity.total);
+  const bar = $('gaugeBar');
+  bar.style.stroke = st.color;
+  bar.style.strokeDashoffset = CIRC - Math.min(p,100)/100 * CIRC;
+  const pill = $('capStatus');
+  pill.className = 'status-pill ' + st.cls;
+  pill.innerHTML = `<i class="fas ${st.icon}"></i>${st.text}`;
+
+  // komposisi limbah
+  [['Organic','organic'],['Inorganic','inorganic'],['B3','b3']].forEach(([id,key])=>{
+    const v = t.waste_composition[key];
+    const ton = Math.round(v/100 * t.capacity.filled);
+    $(`waste${id}`).textContent = `${v}% · ${fmt(ton)} Ton`;
+    $(`bar${id}`).style.width = Math.min(v,100) + '%';
+  });
+
+  renderAlerts(p);
+  renderAlternatives(p);
+  renderMap(p);
+}
+
+/* ---------- Alerts ---------- */
+function renderAlerts(p){
+  const a = $('alertArea');
+  if (p >= FULL_AT){
+    a.innerHTML = `<div class="alert alert-danger d-flex align-items-center gap-2 shadow-sm"><i class="fas fa-triangle-exclamation fs-5"></i><div><strong>Kapasitas ${esc(state.tpa.name)} hampir penuh (${p}%).</strong> Pertimbangkan pengalihan ke TPA alternatif terdekat.</div></div>`;
+  } else if (p >= WARN_AT){
+    a.innerHTML = `<div class="alert alert-warning d-flex align-items-center gap-2 shadow-sm"><i class="fas fa-circle-exclamation fs-5"></i><div><strong>Kapasitas tinggi (${p}%).</strong> Mulai siapkan rencana alternatif.</div></div>`;
+  } else {
+    a.innerHTML = '';
+  }
+}
+
+/* ---------- Alternatif ---------- */
+function renderAlternatives(p){
+  const alts = [...state.alternatives].sort((x,y)=>x.distance_km - y.distance_km);
+  $('altCount').textContent = alts.length + ' lokasi';
+  $('altNotice').innerHTML = p >= FULL_AT ? '' :
+    `<div class="small text-muted mb-3"><i class="fas fa-circle-info me-1"></i>TPA utama masih ${p}% — alternatif ditampilkan sebagai referensi.</div>`;
+
+  if (!alts.length){
+    $('altList').innerHTML = `<div class="empty-state"><i class="fas fa-folder-open"></i>Belum ada TPA alternatif.</div>`;
+    return;
+  }
+  const dim = p < FULL_AT ? ' alt-dim' : '';
+  $('altList').innerHTML = alts.map((a,i)=>`
+    <div class="alt-item${dim}">
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="fw-semibold"><span class="alt-rank">${i+1}</span>${esc(a.name)}</div>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" title="Edit" onclick="openAlt(${a.id})"><i class="fas fa-pen"></i></button>
+          <button class="btn btn-outline-danger" title="Hapus" onclick="deleteAlt(${a.id})"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      <div class="alt-meta mt-1"><i class="fas fa-location-dot me-1"></i>${esc(a.address)}</div>
+      <div class="d-flex flex-wrap gap-2 mt-2">
+        <span class="chip"><i class="fas fa-road"></i>${a.distance_km} km</span>
+        <span class="chip"><i class="fas fa-gauge"></i>${a.capacity_percent}% terisi</span>
+        <span class="chip"><i class="fas fa-star text-warning"></i>${a.rating}</span>
+        <span class="chip"><i class="fas fa-phone"></i>${esc(a.phone)}</span>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------- Peta ---------- */
+function initMap(){
+  map = L.map('map');
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'&copy; OpenStreetMap contributors',maxZoom:19
+  }).addTo(map);
+}
+
+function renderMap(p){
+  const t = state.tpa;
+  if (mainMarker) map.removeLayer(mainMarker);
+  altMarkers.forEach(m=>map.removeLayer(m));
+  altMarkers = [];
+
+  const st = statusOf(p);
+  mainMarker = L.marker([t.coordinates.latitude, t.coordinates.longitude],{
+    icon:L.divIcon({
+      className:'',
+      html:`<div style="width:38px;height:38px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${st.color};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center"><i class="fas fa-dumpster" style="transform:rotate(45deg);color:#fff;font-size:.85rem"></i></div>`,
+      iconSize:[38,38],iconAnchor:[19,38],popupAnchor:[0,-36]
+    })
+  }).bindPopup(`<b>${esc(t.name)}</b><br>Terisi: ${p}%`).addTo(map);
+
+  [...state.alternatives].sort((a,b)=>a.distance_km-b.distance_km).forEach((a,i)=>{
+    altMarkers.push(L.marker([a.coordinates.latitude,a.coordinates.longitude],{
+      icon:L.divIcon({
+        className:'',
+        html:`<div style="width:30px;height:30px;border-radius:50%;background:#0f766e;color:#fff;font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">${i+1}</div>`,
+        iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-14]
+      })
+    }).bindPopup(`<b>${esc(a.name)}</b><br>Jarak: ${a.distance_km} km<br>Terisi: ${a.capacity_percent}%`).addTo(map));
+  });
+
+  const group = L.featureGroup([mainMarker,...altMarkers]);
+  map.fitBounds(group.getBounds().pad(0.15));
+}
+
+/* ---------- CRUD: TPA Utama ---------- */
+function openTpa(){
+  const t = state.tpa;
+  $('fName').value = t.name;
+  $('fOperator').value = t.operator;
+  $('fAddress').value = t.address;
+  $('fPhone').value = t.phone;
+  $('fYear').value = t.year_operational;
+  $('fLand').value = t.land_area;
+  $('fMethod').value = t.processing_method;
+  $('fLat').value = t.coordinates.latitude;
+  $('fLng').value = t.coordinates.longitude;
+  $('fTotal').value = t.capacity.total;
+  $('fFilled').value = t.capacity.filled;
+  $('fOrganic').value = t.waste_composition.organic;
+  $('fInorganic').value = t.waste_composition.inorganic;
+  $('fB3').value = t.waste_composition.b3;
+  bootstrap.Modal.getOrCreateInstance($('modalTpa')).show();
+}
+
+async function saveTpa(){
+  const form = $('formTpa');
+  if (!form.reportValidity()) return;
+
+  const org = +$('fOrganic').value, ino = +$('fInorganic').value, b3 = +$('fB3').value;
+  if (org + ino + b3 !== 100){
+    toast(`Total komposisi limbah harus 100% (sekarang ${org+ino+b3}%)`,'warning');
+    return;
+  }
+  if (+$('fFilled').value > +$('fTotal').value && !confirm('Volume terisi melebihi total kapasitas. Lanjutkan?')) return;
+
+  const ok = await commit(()=>{
+    state.tpa = {
+      ...state.tpa,
+      name:$('fName').value.trim(),
+      operator:$('fOperator').value.trim(),
+      address:$('fAddress').value.trim(),
+      phone:$('fPhone').value.trim(),
+      year_operational:+$('fYear').value,
+      land_area:$('fLand').value.trim(),
+      processing_method:$('fMethod').value.trim(),
+      coordinates:{latitude:+$('fLat').value, longitude:+$('fLng').value},
+      capacity:{total:+$('fTotal').value, filled:+$('fFilled').value},
+      waste_composition:{organic:org, inorganic:ino, b3:b3},
+      last_update:new Date().toISOString()
+    };
+  },'Data TPA tersimpan (lokal)');
+  if (ok) bootstrap.Modal.getInstance($('modalTpa')).hide();
+}
+
+/* ---------- CRUD: Alternatif ---------- */
+function openAlt(id=null){
+  $('formAlt').reset();
+  $('aId').value = '';
+  $('altModalTitle').innerHTML = '<i class="fas fa-plus me-2 text-success"></i>Tambah TPA Alternatif';
+  if (id!==null){
+    const a = state.alternatives.find(x=>x.id===id);
+    if (!a) return;
+    $('altModalTitle').innerHTML = '<i class="fas fa-pen me-2 text-success"></i>Edit TPA Alternatif';
+    $('aId').value = a.id;
+    $('aName').value = a.name;
+    $('aPhone').value = a.phone;
+    $('aAddress').value = a.address;
+    $('aDistance').value = a.distance_km;
+    $('aCapacity').value = a.capacity_percent;
+    $('aRating').value = a.rating;
+    $('aLat').value = a.coordinates.latitude;
+    $('aLng').value = a.coordinates.longitude;
+  }
+  bootstrap.Modal.getOrCreateInstance($('modalAlt')).show();
+}
+
+async function saveAlt(){
+  if (!$('formAlt').reportValidity()) return;
+  const editingId = $('aId').value ? +$('aId').value : null;
+
+  const ok = await commit(()=>{
+    const item = {
+      id: editingId ?? Date.now(),
+      name: $('aName').value.trim(),
+      address: $('aAddress').value.trim(),
+      phone: $('aPhone').value.trim(),
+      distance_km: +$('aDistance').value,
+      capacity_percent: +$('aCapacity').value,
+      rating: +$('aRating').value,
+      coordinates: {latitude:+$('aLat').value, longitude:+$('aLng').value}
+    };
+    if (editingId!==null){
+      state.alternatives = state.alternatives.map(a=>a.id===editingId?item:a);
+    } else {
+      state.alternatives.push(item);
+    }
+  }, editingId!==null ? 'TPA alternatif diperbarui' : 'TPA alternatif ditambahkan');
+  if (ok) bootstrap.Modal.getInstance($('modalAlt')).hide();
+}
+
+async function deleteAlt(id){
+  const a = state.alternatives.find(x=>x.id===id);
+  if (!a || !confirm(`Hapus "${a.name}"?`)) return;
+  await commit(()=>{ state.alternatives = state.alternatives.filter(x=>x.id!==id); },'TPA alternatif dihapus');
+}
+
+/* ---------- Init ---------- */
+document.addEventListener('DOMContentLoaded', async () => {
+  $('btnEdit').addEventListener('click', openTpa);
+  $('btnAddAlt').addEventListener('click', () => openAlt());
+  $('btnSaveTpa').addEventListener('click', saveTpa);
+  $('btnSaveAlt').addEventListener('click', saveAlt);
+
+  initMap();
+
+  try {
+    // Jika ada data yang pernah di‑save secara lokal, pakai itu dulu
+    const saved = localStorage.getItem('tpa_state');
+    if (saved) state = JSON.parse(saved);
+    else await loadData();
+    render();
+  } catch (e) {
+    $('alertArea').innerHTML = `<div class="alert alert-danger"><strong>Gagal memuat data.</strong> ${esc(e.message)}<br>Pastikan file <code>data.json</code> ada di folder yang sama dan dibuka lewat server (mis. <code>python -m http.server</code>), bukan langsung dari file.</div>`;
+  }
+});
+</script>
+</body>
+</html>

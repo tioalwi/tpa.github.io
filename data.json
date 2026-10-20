@@ -1,0 +1,22 @@
+{
+  "tpa": {
+    "name": "TPA Cipeucang",
+    "address": "Jl. Kapling Nambo No.51, Serpong, Kec. Serpong, Kota Tangerang Selatan, Banten 15310",
+    "coordinates": { "latitude": -6.324870461170018, "longitude": 106.65908891349103 },
+    "operator": "Dinas Kebersihan dan Pertamanan Kota Depok",
+    "phone": "(021) 7732-0910",
+    "year_operational": 1990,
+    "land_area": "32.15 Ha",
+    "processing_method": "Sanitary Landfill (TPA Modern)",
+    "capacity": { "total": 5000, "filled": 4650 },
+    "waste_composition": { "organic": 68, "inorganic": 22, "b3": 10 },
+    "last_update": "2026-10-20T13:00:00+07:00"
+  },
+  "alternatives": [
+    { "id": 1, "name": "TPA Bantargebang", "address": "Jl. Raya Bantargebang, Cileungsi, Bogor", "coordinates": { "latitude": -6.3856, "longitude": 106.8945 }, "distance_km": 5.2, "capacity_percent": 65, "phone": "(021) 8740-4000", "rating": 4.2 },
+    { "id": 2, "name": "TPA Cilangkap", "address": "Jl. Cilangkap, Pasar Rebo, Jakarta Timur", "coordinates": { "latitude": -6.2847, "longitude": 106.9134 }, "distance_km": 8.7, "capacity_percent": 60, "phone": "(021) 8005-0000", "rating": 4.0 },
+    { "id": 3, "name": "TPA Sarimukti", "address": "Jl. Sarimukti, Pabuaran, Subang", "coordinates": { "latitude": -6.5412, "longitude": 107.1456 }, "distance_km": 35.8, "capacity_percent": 40, "phone": "(0260) 500-100", "rating": 4.5 },
+    { "id": 4, "name": "TPA Cipayung", "address": "Jl. Cipayung Raya, Jakarta Timur", "coordinates": { "latitude": -6.3412, "longitude": 106.9678 }, "distance_km": 12.4, "capacity_percent": 60, "phone": "(021) 8740-5500", "rating": 3.8 },
+    { "id": 5, "name": "TPA Bekasi Utara", "address": "Jl. Pejuang No. 1A, Bekasi Utara", "coordinates": { "latitude": -6.2156, "longitude": 107.0234 }, "distance_km": 18.3, "capacity_percent": 50, "phone": "(021) 8890-2000", "rating": 4.1 }
+  ]
+}
